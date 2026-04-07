@@ -17,33 +17,42 @@ jobs:
 
       - name: Convert china domains
         run: |
-          curl -sSL $CHINA_URL \
-            | grep -v '^\s*#' | grep -v '^\s*$' \
-            | sed 's/^/DOMAIN-SUFFIX,/' \
-            > china.list
+          curl -sSL $CHINA_URL | awk '
+            /^\s*$/ || /^\s*#/ { next }
+            /^full:/ { sub(/^full:/, ""); print "DOMAIN," $0; next }
+            /^regexp:/ { next }
+            /^domain:/ { sub(/^domain:/, ""); print "DOMAIN-SUFFIX," $0; next }
+            { print "DOMAIN-SUFFIX," $0 }
+          ' > china.list
 
       - name: Convert gfw domains
         run: |
-          curl -sSL $GFW_URL \
-            | grep -v '^\s*#' | grep -v '^\s*$' \
-            | sed 's/^/DOMAIN-SUFFIX,/' \
-            > gfw.list
+          curl -sSL $GFW_URL | awk '
+            /^\s*$/ || /^\s*#/ { next }
+            /^full:/ { sub(/^full:/, ""); print "DOMAIN," $0; next }
+            /^regexp:/ { next }
+            /^domain:/ { sub(/^domain:/, ""); print "DOMAIN-SUFFIX," $0; next }
+            { print "DOMAIN-SUFFIX," $0 }
+          ' > gfw.list
 
       - name: Convert ad domains
         run: |
-          curl -sSL $AD_URL \
-            | grep -v '^\s*#' | grep -v '^\s*$' \
-            | sed 's/^/DOMAIN-SUFFIX,/' \
-            > reject.list
+          curl -sSL $AD_URL | awk '
+            /^\s*$/ || /^\s*#/ { next }
+            /^full:/ { sub(/^full:/, ""); print "DOMAIN," $0; next }
+            /^regexp:/ { next }
+            /^domain:/ { sub(/^domain:/, ""); print "DOMAIN-SUFFIX," $0; next }
+            { print "DOMAIN-SUFFIX," $0 }
+          ' > reject.list
 
       - name: Push to release branch
         run: |
           mkdir output && mv china.list gfw.list reject.list output/
           cd output
           git init
+          git config --global init.defaultBranch release
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b release
           git add .
           git commit -m "Updated $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M')"
           git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
