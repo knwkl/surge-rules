@@ -33,7 +33,7 @@ jobs:
         run: |
           curl -sSL $AD_URL \
             | grep -v '^\s*#' | grep -v '^\s*$' \
-            | sed 's/^domain:/DOMAIN-SUFFIX,/' \
+            | sed 's/^/DOMAIN-SUFFIX,/' \
             > reject.list
 
       - name: Push to release branch
