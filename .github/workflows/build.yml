@@ -1,0 +1,50 @@
+name: Build Surge Rules
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 22 * * *"  # 每天北京时间早上6点执行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set variables
+        run: |
+          echo "CHINA_DOMAINS_URL=https://raw.githubusercontent.com/pmkol/easymosdns/rules/china_domain_list.txt" >> $GITHUB_ENV
+          echo "GFW_DOMAINS_URL=https://raw.githubusercontent.com/pmkol/easymosdns/rules/gfw_domain_list.txt" >> $GITHUB_ENV
+          echo "AD_DOMAINS_URL=https://raw.githubusercontent.com/Cats-Team/AdRules/main/mosdns_adrules.txt" >> $GITHUB_ENV
+
+      - name: Download and convert china domains
+        run: |
+          curl -sSL $CHINA_DOMAINS_URL \
+            | grep -v '^\s*#' | grep -v '^\s*$' \
+            | sed 's/^/DOMAIN-SUFFIX,/' \
+            > china.list
+
+      - name: Download and convert gfw domains
+        run: |
+          curl -sSL $GFW_DOMAINS_URL \
+            | grep -v '^\s*#' | grep -v '^\s*$' \
+            | sed 's/^/DOMAIN-SUFFIX,/' \
+            > gfw.list
+
+      - name: Download and convert ad domains
+        run: |
+          curl -sSL $AD_DOMAINS_URL \
+            | grep -v '^\s*#' | grep -v '^\s*$' \
+            | sed 's/^domain://; s/^/DOMAIN-SUFFIX,/' \
+            > reject.list
+
+      - name: Push to release branch
+        run: |
+          mkdir output && mv china.list gfw.list reject.list output/
+          cd output
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b release
+          git add .
+          git commit -m "Updated $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M')"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f -u origin release
