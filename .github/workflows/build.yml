@@ -13,7 +13,7 @@ jobs:
         run: |
           echo "CHINA_URL=https://raw.githubusercontent.com/pmkol/easymosdns/rules/china_domain_list.txt" >> $GITHUB_ENV
           echo "GFW_URL=https://raw.githubusercontent.com/pmkol/easymosdns/rules/gfw_domain_list.txt" >> $GITHUB_ENV
-          echo "AD_URL=https://raw.githubusercontent.com/Cats-Team/AdRules/main/mosdns_adrules.txt" >> $GITHUB_ENV
+          echo "AD_URL=https://raw.githubusercontent.com/pmkol/easymosdns/refs/heads/rules/ad_domain_list.txt" >> $GITHUB_ENV
 
       - name: Convert china domains
         run: |
