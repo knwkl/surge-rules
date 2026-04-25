@@ -14,6 +14,7 @@ jobs:
           echo "CHINA_URL=https://raw.githubusercontent.com/pmkol/easymosdns/rules/china_domain_list.txt" >> $GITHUB_ENV
           echo "GFW_URL=https://raw.githubusercontent.com/pmkol/easymosdns/rules/gfw_domain_list.txt" >> $GITHUB_ENV
           echo "AD_URL=https://raw.githubusercontent.com/pmkol/easymosdns/refs/heads/rules/ad_domain_list.txt" >> $GITHUB_ENV
+          echo "CDN_URL=https://raw.githubusercontent.com/pmkol/easymosdns/refs/heads/rules/cdn_domain_list.txt" >> $GITHUB_ENV
 
       - name: Convert china domains
         run: |
@@ -45,9 +46,28 @@ jobs:
             { print "DOMAIN-SUFFIX," $0 }
           ' > reject.list
 
+      - name: Convert cdn domains
+        run: |
+          curl -sSL $CDN_URL | awk '
+            /^\s*$/ || /^\s*#/ { next }
+            /^full:/ { sub(/^full:/, ""); print "DOMAIN," $0; next }
+            /^regexp:/ {
+              sub(/^regexp:/, "")
+              if ($0 ~ /^\^/) {
+                sub(/^\^/, "^https?://")
+              } else {
+                $0 = "^https?://" $0
+              }
+              print "URL-REGEX," $0
+              next
+            }
+            /^domain:/ { sub(/^domain:/, ""); print "DOMAIN-SUFFIX," $0; next }
+            { print "DOMAIN-SUFFIX," $0 }
+          ' > cdn.list
+
       - name: Push to release branch
         run: |
-          mkdir output && mv china.list gfw.list reject.list output/
+          mkdir output && mv china.list gfw.list reject.list cdn.list output/
           cd output
           git config --global init.defaultBranch release
           git init
