@@ -51,8 +51,16 @@ jobs:
           curl -sSL $CDN_URL | awk '
             /^\s*$/ || /^\s*#/ { next }
             /^full:/ { sub(/^full:/, ""); print "DOMAIN," $0; next }
-            /^regexp:/ { next }
-            /^domain:/ { sub(/^domain:/, ""); print "DOMAIN-SUFFIX," $0; next }
+            /^regexp:/ {
+              sub(/^regexp:/, "")
+              if ($0 ~ /^\^/) {
+                sub(/^\^/, "^https?://")
+              } else {
+                $0 = "^https?://" $0
+              }
+              print "URL-REGEX," $0
+              next
+            }
             /^domain:/ { sub(/^domain:/, ""); print "DOMAIN-SUFFIX," $0; next }
             { print "DOMAIN-SUFFIX," $0 }
           ' > cdn.list
@@ -60,18 +68,14 @@ jobs:
       - name: Check for changes
         id: diff
         run: |
-          # 拉取现有 release 分支（忽略失败，首次运行时分支不存在）
           mkdir prev
-          curl -sSf "https://raw.githubusercontent.com/${{ github.repository }}/release/china.list" -o prev/china.list 2>/dev/null || true
-          curl -sSf "https://raw.githubusercontent.com/${{ github.repository }}/release/gfw.list"   -o prev/gfw.list   2>/dev/null || true
+          curl -sSf "https://raw.githubusercontent.com/${{ github.repository }}/release/china.list"  -o prev/china.list  2>/dev/null || true
+          curl -sSf "https://raw.githubusercontent.com/${{ github.repository }}/release/gfw.list"    -o prev/gfw.list    2>/dev/null || true
           curl -sSf "https://raw.githubusercontent.com/${{ github.repository }}/release/reject.list" -o prev/reject.list 2>/dev/null || true
-          curl -sSf "https://raw.githubusercontent.com/${{ github.repository }}/release/cdn.list"   -o prev/cdn.list   2>/dev/null || true
+          curl -sSf "https://raw.githubusercontent.com/${{ github.repository }}/release/cdn.list"    -o prev/cdn.list    2>/dev/null || true
 
           NEW_HASH=$(cat china.list gfw.list reject.list cdn.list | sha256sum)
           OLD_HASH=$(cat prev/china.list prev/gfw.list prev/reject.list prev/cdn.list 2>/dev/null | sha256sum || echo "none")
-
-          echo "new=$NEW_HASH"
-          echo "old=$OLD_HASH"
 
           if [ "$NEW_HASH" = "$OLD_HASH" ]; then
             echo "changed=false" >> $GITHUB_OUTPUT
